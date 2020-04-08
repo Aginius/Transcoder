@@ -3,6 +3,7 @@
 
 int strCount(char *, char *);
 int strCompare(char *, char *, int);
+int strCompareTail(char *, char *);
 char * appendString(char *, char *);
 char * init(int);
 void appendChar(char *, char);
@@ -35,6 +36,24 @@ int strCompare(char str[], char word[], int index)
 		if (str[i] != word[j])
 			return 0;
 	}	
+	return 1;
+}
+//Compare the end of the first string with the second string
+int strCompareTail(char str[], char word[])
+{
+	int i,j;
+	int len1;
+	int len2;
+	
+	for (len1 = 0; str[len1] != '\0'; len1++)
+		;
+	for (len2 = 0; word[len2] != '\0'; len2++)
+		;
+	for (i = len1-len2, j = 0; word[j] != '\0'; i++, j++)
+	{
+		if (str[i] != word[j])
+			return 0;
+	}
 	return 1;
 }
 
@@ -155,6 +174,18 @@ int strLen(char str[])
 		;
 	return i;
 }
+//RETURNS THE FIRST CHAR IN A STRING THAT'S NOT A SPACE AFTER THE GIVEN INDEX
+char nextChar(char str[], int index)
+{
+	int i;
+
+	for (i = index+1; str[i] != '\0'; i++)
+	{
+		if (str[i] != ' ')
+			return str[i];
+	}
+	return ' ';
+}
 
 void noSpace(char str[])
 {
@@ -181,6 +212,8 @@ void noSpace(char str[])
 		}
 		for (i = 0; i < count; i++)
 			str[i] = tmp[i];
+		//THIS MIGHT CAUSE AN ERROR
+		str[i] = '\0';
 		free(tmp);
 	}
 }

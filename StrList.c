@@ -8,10 +8,12 @@ typedef struct list_P
 } list;
 
 void list_print(list * );
+void list_debug(list *);
 list * list_get();
 list * list_push(list *, char);
 list * list_append(list *, char *);
 list * list_appendCh(list *, char);
+int list_compare(list *, char *);
 void list_remove(list *, int);
 void list_free(list *);
 void list_swap(list *, int, int);
@@ -19,11 +21,19 @@ int str_to_int(char val[]);
 char * toStr(list *);
 int listCount(list *, char);
 int list_len(list *);
+int list_smartLen(list *);
 
 void list_print(list * head)
 {
 	for ( ; head; head = head -> next)
 		printf("%c",head->c);
+	printf("\n");
+}
+
+void list_debug(list * head)
+{
+	for ( ; head; head = head -> next)
+		printf("%d ",head->c);
 	printf("\n");
 }
 
@@ -175,6 +185,26 @@ list * list_appendCh(list * head, char val)
 	return head;
 }
 
+int list_compare(list * lis, char str[])
+{
+	int len;
+	int i;
+
+	for (len = 0; str[len] != '\0'; len++)
+		;
+	
+	if (len == list_smartLen(lis))
+	{
+		for (i = 0; i < len; i++, lis = lis -> next)
+		{
+			if (lis -> c != str[i])
+				return 0;
+		}
+		return 1;
+	}
+	return 0;
+}
+
 
 void list_remove(list * head, int index)
 {
@@ -246,8 +276,6 @@ char * toStr(list * head)
 	char * nu_str;
 	int i;
 
-	printf("List length?: %d\n",list_len(head));
-
 	if (nu_str = malloc(sizeof(char)*(list_len(head)+1)))
 	{
 		for (i = 0, tmp = head; tmp; tmp = tmp -> next, i++)	
@@ -259,6 +287,7 @@ char * toStr(list * head)
 		printf("ALLOCATION ERROR\n");
 	
 	list_free(head);
+
 	return nu_str;
 }	
 
@@ -280,6 +309,16 @@ int list_len(list * head)
 
 	for (len = 0; head; head = head -> next, len++)
 		;
+	return len;
+}
+
+int list_smartLen(list * head)
+{
+	int len;
+
+	for (len = 0; head; head = head -> next)
+		if (head -> c != ' ')
+			len++;
 	return len;
 }
 
