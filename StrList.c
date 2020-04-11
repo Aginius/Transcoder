@@ -275,7 +275,7 @@ char * toStr(list * head)
 	list * tmp;
 	char * nu_str;
 	int i;
-
+	
 	if (nu_str = malloc(sizeof(char)*(list_len(head)+1)))
 	{
 		for (i = 0, tmp = head; tmp; tmp = tmp -> next, i++)	

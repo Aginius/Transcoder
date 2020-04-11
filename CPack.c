@@ -7,7 +7,6 @@ void scan_C(char *);
 char * input_C(char *, int *, int *);
 int isFunction(char *);
 int isCondition_C(char *);
-void tab_line(FILE *, int);
 
 int main (int argc, char * argv[])
 {
@@ -49,7 +48,7 @@ void scan_C(char fname[])
 	
 	if (input = fopen(fname, "r"))
 	{
-		if (output = fopen("output.pc", "w"))
+		if (output = fopen("PseudoCode.pc", "w"))
 		{
 			//TEMPORARY DEBUG VARIABLE TO MARK ITERATIONS
 			int debug = 0;
@@ -74,13 +73,13 @@ void scan_C(char fname[])
 
 					if (word[0] == '/' && word[1] == '*')
 					{
-						printf("COMMENT\n");
+						//printf("COMMENT\n");
 						isComment = 1;
 					}
 			
 					else if (list_compare(line, "else") &&  !strCompare(word, "if", 0))
 					{
-						printf("ELSE STATEMENT\n");
+						//printf("ELSE STATEMENT\n");
 						elseStatement = 1;
 					}
 					if (!elseStatement)
@@ -102,8 +101,8 @@ void scan_C(char fname[])
 				if (!isComment && (checkLast(word) == ';' && openBrCount == closedBrCount || checkLast(word) == '{' || checkLast(word) == '}' || checkLast(word) == ')' && openBrCount == closedBrCount || list_compare(line, "else") && elseStatement || line -> c == '#' && (checkLast(word) == '>' || checkLast(word) == '"')) || isComment && strCompareTail(word, "*/"))
 				{
 					string_line = toStr(line);
-					printf("CURRENT LINE: %s\n",string_line);
-					printf("Open Brackets: %d\nClosed Brackets: %d\n", openBrCount, closedBrCount);
+					//printf("CURRENT LINE: %s\n",string_line);
+					//printf("Open Brackets: %d\nClosed Brackets: %d\n", openBrCount, closedBrCount);
 
 					if (strCompare(string_line, "int main(", 0) || strCompare(string_line, "int main (", 0))
 					{
@@ -131,7 +130,6 @@ void scan_C(char fname[])
 					}
 					else
 					{
-						//printf("noBrCondition: %d\n",noBrCondition);
 						if (checkLast(string_line) == '{')
 						{
 							noBrCondition = 0;
@@ -139,7 +137,7 @@ void scan_C(char fname[])
 						}
 						else if (noBrCondition)
 						{
-							printf("NO BRACKET INDENTING\n");
+							//printf("NO BRACKET INDENTING\n");
 							tab_line(output, indent);
 							fprintf(output, "%c\n", '{');
 							tmp = 1;
@@ -147,7 +145,7 @@ void scan_C(char fname[])
 						}
 					
 						noBrCondition = 0;
-
+						
 						trans = input_C(string_line, &indent, &noBrCondition);
 						
 						if (isOpenBr)
@@ -169,10 +167,11 @@ void scan_C(char fname[])
 							fprintf(output, "%c\n", '}');
 							tmp = 0;
 						}
-						printf("Printing: %s\n", trans);
+						//printf("Printing: %s\n", trans);
 						openBrCount = 0;
 						closedBrCount = 0;
 						line = NULL;
+						free(trans);
 					}
 					printf("\n");
 					free(string_line);
@@ -198,7 +197,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 	if (strCompare(row,"if",0) && nextChar(row, 1) == '(')
 	{
 		//printf("DEBUG 0\n");
-		output = list_append(output, "C.if ");
+		output = list_append(output, "C. if ");
 		for (i = ch_index(row, '(', 1); i < ch_index(row, ')', charCount(row, ')'))+1; i++)
 			output = list_appendCh(output, row[i]);
 		*noBrCondition = 1;
@@ -209,7 +208,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		//printf("DEBUG 1\n");
 		if (nextChar(row, 3) == 'i')
 		{
-			output = list_append(output, "C.elif ");
+			output = list_append(output, "C. elif ");
 			for (i = ch_index(row, '(', 1); i < ch_index(row, ')', charCount(row, ')'))+1; i++)
 				output = list_appendCh(output, row[i]);
 			*noBrCondition = 1;
@@ -217,7 +216,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		}
 		else
 		{
-			output = list_append(output, "C.else ");
+			output = list_append(output, "C. else ");
 			for (i = ch_index(row, '(', 1); i < ch_index(row, ')', charCount(row, ')'))+1; i++)
 				output = list_appendCh(output, row[i]);
 			*noBrCondition = 1;
@@ -228,7 +227,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 	else if (strCompare(row,"while",0) && nextChar(row, 4) == '(')
 	{
 		//printf("DEBUG 2\n");
-		output = list_append(output, "C.wh ");
+		output = list_append(output, "C. wh ");
 		for (i = ch_index(row, '(', 1); i < ch_index(row, ')', charCount(row, ')'))+1; i++)
 			output = list_appendCh(output, row[i]);
 		*noBrCondition = 1;
@@ -237,7 +236,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 	else if (strCompare(row,"for",0) && nextChar(row, 2) == '(')
 	{
 		//printf("DEBUG 3\n");
-		output = list_append(output, "C.for ");
+		output = list_append(output, "C. for ");
 		for (i = ch_index(row, '(', 1); i < ch_index(row, ')', charCount(row, ')'))+1 && row[i] != '\0'; i++)
 			output = list_appendCh(output, row[i]);
 		*noBrCondition = 1;
@@ -270,11 +269,8 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 			}
 			else if (functionType == 3)
 			{
-				output = list_append(output, "V.D.I.i ");
-				for (i = 4; row[i] != '='; i++)
-					output = list_appendCh(output, row[i]);
-				output = list_append(output, "= F.Cl ");
-				for (i = i+1 ; row[i] != ';'; i++)
+				output = list_append(output, "V.D.I.Cl.i ");
+				for (i = 4; row[i] != ';'; i++)
 					output = list_appendCh(output, row[i]);
 				return toStr(output);
 			}
@@ -317,11 +313,8 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 			}
 			else if (functionType == 3)
 			{
-				output = list_append(output, "V.D.I.c ");
-				for (i = 5; row[i] != '='; i++)
-					output = list_appendCh(output, row[i]);
-				output = list_append(output, "= F.Cl ");
-				for (i = i+1 ; row[i] != ';'; i++)
+				output = list_append(output, "V.D.I.Cl.c ");
+				for (i = 5; row[i] != ';'; i++)
 					output = list_appendCh(output, row[i]);
 				return toStr(output);	
 			}
@@ -407,13 +400,8 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 			if (charCount(row, '='))
 			{
 				//printf("DEBUG 12\n");
-				output = list_append(output, "V.I ");
-				for (i = 0; row[i] != '='; i++)
-					output = list_appendCh(output, row[i]);
-				output = list_append(output, "= F.Cl ");
-				for (i = i+1; row[i] == ' ' && row[i] != '\0'; i++)
-					;
-				for ( ; row[i] != ';' && row[i] != '\0'; i++)
+				output = list_append(output, "V.I.Cl ");
+				for (i = 0; row[i] != ';'; i++)
 					output = list_appendCh(output, row[i]);
 				return toStr(output);
 			}
@@ -480,13 +468,6 @@ int isFunction(char row[])
 	return 0;
 }
 
-void tab_line(FILE * fptr, int tabs)
-{
-	int i;
-
-	for (i = 0; i < tabs; i++)
-		fprintf(fptr, "\t");
-}
 
 
 
