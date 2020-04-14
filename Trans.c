@@ -4,6 +4,7 @@
 int smartCount(list *, char);
 int noPseudo(char *);
 void tab_line(FILE *, int);
+int isIncrement(char *);
 
 //Counts the character if not in strings
 int smartCount(list * head, char ch)
@@ -57,5 +58,18 @@ void tab_line(FILE * fptr, int tabs)
 
 	for (i = 0; i < tabs; i++)
 		fprintf(fptr, "\t");
+}
+
+int isIncrement(char str[])
+{
+	int i;
+	for (i = 0; str[i] != '\0'; i++)
+	{
+		if (str[i] == '+' && str[i+1] == '+')
+			return 1;
+		else if (str[i] == '-' && str[i+1] == '-')
+			return 2;
+	}
+	return 0;
 }
 

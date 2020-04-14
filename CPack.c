@@ -10,7 +10,10 @@ int isCondition_C(char *);
 
 int main (int argc, char * argv[])
 {
-	scan_C("try.c");
+	if (argv[1])
+		scan_C(argv[1]);
+	else
+		scan_C("try.c");
 	return 0;
 }
 
@@ -106,7 +109,7 @@ void scan_C(char fname[])
 
 					if (strCompare(string_line, "int main(", 0) || strCompare(string_line, "int main (", 0))
 					{
-						fprintf(output, "PROGRAM DECLARATION\n");
+						fprintf(output, "MAIN DECLARATION\n");
 						isMain = 1;
 						openBrCount = 0;
 						closedBrCount = 0;
@@ -114,6 +117,7 @@ void scan_C(char fname[])
 					}
 					else if (strCompare(string_line, "return", 0) && !firstReturn && isMain)
 					{
+						fprintf(output, "MAIN RETURN\n");
 						firstReturn = 1;
 						openBrCount = 0;
 						closedBrCount = 0;
@@ -194,7 +198,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 	int functionType;
 	int i;
 
-	if (strCompare(row,"if",0) && nextChar(row, 1) == '(')
+	if (strCompare(row,"if ",0) && nextChar(row, 1) == '(')
 	{
 		//printf("DEBUG 0\n");
 		output = list_append(output, "C. if ");
@@ -203,7 +207,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		*noBrCondition = 1;
 		return toStr(output);
 	}
-	else if (strCompare(row,"else",0))
+	else if (strCompare(row,"else ",0) || strCompare(row,"else(",0))
 	{
 		//printf("DEBUG 1\n");
 		if (nextChar(row, 3) == 'i')
@@ -216,9 +220,10 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		}
 		else
 		{
-			output = list_append(output, "C. else ");
+			output = list_append(output, "C. else");
 			for (i = ch_index(row, '(', 1); i < ch_index(row, ')', charCount(row, ')'))+1; i++)
 				output = list_appendCh(output, row[i]);
+			
 			*noBrCondition = 1;
 			return toStr(output);
 		}
@@ -242,7 +247,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		*noBrCondition = 1;
 		return toStr(output);
 	}
-	else if (strCompare(row,"int",0))
+	else if (strCompare(row,"int ",0))
 	{
 		//printf("DEBUG 4\n");
 		if (functionType = isFunction(row))
@@ -286,7 +291,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 			return toStr(output);
 		}
 	}
-	else if (strCompare(row,"char",0))
+	else if (strCompare(row,"char ",0))
 	{
 		//printf("DEBUG 5\n");
 		if (functionType = isFunction(row))
@@ -330,7 +335,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 			return toStr(output);
 		}
 	}
-	else if (strCompare(row,"void",0))
+	else if (strCompare(row,"void ",0))
 	{
 		//printf("DEBUG 6\n");
 		if (functionType = isFunction(row))
@@ -368,7 +373,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		}
 		return toStr(output);
 	}
-	else if (strCompare(row,"printf",0) && nextChar(row, 5) == '(')
+	else if (strCompare(row,"printf ",0) && nextChar(row, 5) == '(')
 	{
 		//printf("DEBUG 8\n");
 		output = list_append(output, "F.Cl print");
@@ -390,6 +395,12 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		//printf("DEBUG 10\n");
 		output = list_appendCh(output, '}');
 		*indent = *indent - 1;
+		return toStr(output);
+	}
+	else if (strCompare(row,"return",0))
+	{
+		for (i = 0; row[i] != ';'; i++)
+			output = list_appendCh(output, row[i]);
 		return toStr(output);
 	}
 	else
@@ -417,6 +428,13 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		else if (charCount(row, '='))
 		{
 			//printf("DEBUG 14\n");
+			output = list_append(output, "V.I ");
+			for (i = 0; row[i] != ';'; i++)
+				output = list_appendCh(output, row[i]);
+			return toStr(output);
+		}
+		else if (isIncrement(row))
+		{
 			output = list_append(output, "V.I ");
 			for (i = 0; row[i] != ';'; i++)
 				output = list_appendCh(output, row[i]);
