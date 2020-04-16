@@ -217,3 +217,19 @@ void noSpace(char str[])
 		free(tmp);
 	}
 }
+/*
+//COPIES AN EXISTING STRING TO AN EMPTY SPACE OF MEMORY
+void copyStr(char str[], char * toCopy)
+{
+	int i;
+
+	for (i = 0; str[i] != '\0'; i++)
+		;
+
+	if (toCopy = malloc(sizeof(char)*i))
+	{
+		for (i = 0; str[i] != '\0'; i++)
+
+	}
+}
+*/

@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include "str.c"
 #include "StrList.c"
-#include "Trans.c"
+#include "TransLib.c"
 
 void scan_C(char *);
 char * input_C(char *, int *, int *);
@@ -373,7 +373,7 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 		}
 		return toStr(output);
 	}
-	else if (strCompare(row,"printf ",0) && nextChar(row, 5) == '(')
+	else if (strCompare(row,"printf",0) && nextChar(row, 5) == '(')
 	{
 		//printf("DEBUG 8\n");
 		output = list_append(output, "F.Cl print");
