@@ -46,7 +46,7 @@ void scan_C(char fname[])
 	firstReturn = 0;
 	noBrCondition = 0;
 	isComment = 0;
-	elseStatement;
+	elseStatement = 0;
 	tmp = 0;
 	
 	if (input = fopen(fname, "r"))

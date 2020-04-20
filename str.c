@@ -174,14 +174,14 @@ int strLen(char str[])
 		;
 	return i;
 }
-//RETURNS THE FIRST CHAR IN A STRING THAT'S NOT A SPACE AFTER THE GIVEN INDEX
+//RETURNS THE FIRST CHAR IN A STRING THAT'S NOT A SPACE AFTER THE GIVEN INDEX, A TAB OR AN END CHARACTER
 char nextChar(char str[], int index)
 {
 	int i;
 
 	for (i = index+1; str[i] != '\0'; i++)
 	{
-		if (str[i] != ' ')
+		if (str[i] != ' ' && str[i] != '\n' && str[i] != '\t')
 			return str[i];
 	}
 	return ' ';

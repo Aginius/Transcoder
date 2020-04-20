@@ -2,10 +2,10 @@
 #include <stdlib.h>
 
 int smartCount(list *, char);
-int noPseudo(char *);
+int noPseudo(char *, int);
 void tab_line(FILE *, int);
 int isIncrement(char *);
-void Classify(char *, int *, int *, int *, int *, int *, int *, int *, int *, int *);
+void Classify(char *, int, int *, int *, int *, int *, int *, int *, int *, int *, int *);
 
 
 //Counts the character if not in strings
@@ -44,14 +44,14 @@ int smartCount(list * head, char ch)
 	return count;
 }
 //Returns the index of the string right after the pseudo type
-int noPseudo(char str[])
+int noPseudo(char str[], int ind)
 {
-	int i;
-
-	for (i = 0; str[i] != ' '; i++)
+	if (str[ind] == '{' || str[ind] == '}' || str[ind] == '/' || strCompare(str, "return", ind))
+		return ind;
+	for ( ; str[ind] != ' '; ind++)
 		;
-	i++;
-	return i;
+	ind++;
+	return ind;
 }
 
 void tab_line(FILE * fptr, int tabs)
@@ -75,7 +75,7 @@ int isIncrement(char str[])
 	return 0;
 }
 
-void Classify(char str[], int * variable, int * function, int * condition, int * declaration, int * initialization, int * call, int * intType, int * charType, int * voidType)
+void Classify(char str[], int start,  int * variable, int * function, int * condition, int * declaration, int * initialization, int * call, int * intType, int * charType, int * voidType)
 {
 	list * type = NULL;
 	int compare;
@@ -83,7 +83,10 @@ void Classify(char str[], int * variable, int * function, int * condition, int *
 
 	compare = 1;
 
-	for (i = 0; str[i] != ' ' && str[i] != '\0'; i++)
+	if (str[start] == '{' || str[start] == '}')
+		return;
+
+	for (i = start; str[i] != ' ' && str[i] != '\0'; i++)
 	{
 		if (str[i] == '.')
 			compare = 1;

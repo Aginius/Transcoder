@@ -7,12 +7,21 @@ typedef struct list_P
 	struct list_P * next;
 } list;
 
+typedef struct list_A
+{
+	list * str;
+	struct list_A * next;
+} str_list;
+
+/*CURRENTLY IMPLEMENTING LISTS OF DYNAMIC STRINGS*/
+
 void list_print(list * );
 void list_debug(list *);
 list * list_get();
 list * list_push(list *, char);
 list * list_append(list *, char *);
 list * list_appendCh(list *, char);
+list * list_appendL(list *, list *);
 int list_compare(list *, char *);
 void list_remove(list *, int);
 void list_free(list *);
@@ -22,6 +31,9 @@ char * toStr(list *);
 int listCount(list *, char);
 int list_len(list *);
 int list_smartLen(list *);
+
+str_list * strl_alloc(str_list *, int);
+void strl_free(str_list *, int);
 
 void list_print(list * head)
 {
@@ -157,7 +169,7 @@ list * list_append(list * head, char val[])
 list * list_appendCh(list * head, char val)
 {
 	list * tmp;
-	
+		
 	if (head)
 	{
 		tmp = head;
@@ -182,6 +194,27 @@ list * list_appendCh(list * head, char val)
 	else
 		printf("ALLOCATION ERROR\n");
 	head -> next = NULL;
+	
+	return head;
+}
+/*Appends another list*/
+list * list_appendL(list * head, list * lis)
+{
+	list * tmp;
+
+	if (head)
+	{
+		tmp = head;
+		while (tmp -> next)
+			tmp = tmp -> next;
+		
+		tmp -> next = lis;
+		
+		return head;
+	}
+	
+	head = lis;
+
 	return head;
 }
 
@@ -248,6 +281,7 @@ void list_free(list * head)
 		free(tmp);
 		tmp = head;
 	}
+	free(head);
 }
 
 void list_swap(list * head, int ind1, int ind2)
@@ -344,4 +378,74 @@ int str_to_int(char val[])
 	}
 
 	return tmp;
+}
+/*ALLOCATES EMPTY SPACE n TIMES, APPENDS IF ALREADY ALLOCATED*/
+str_list * strl_alloc(str_list * head, int n)
+{
+	str_list * tmp;
+	int i;
+
+	tmp = head;
+	
+	if (head)
+	{	
+		while(tmp->next)
+			tmp = tmp -> next;
+		
+		for (i = 0; i < n; i++)
+		{
+			if (tmp->next = malloc(sizeof(str_list)))
+				;
+			else
+				printf("ALLOCATION ERROR\n");
+			tmp = tmp -> next;
+		}
+		tmp -> next =  NULL;
+		return head;
+	}
+	
+	if (head = malloc(sizeof(str_list)))
+		;	
+	else
+		printf("ALLOCATION ERROR\n");
+	
+	for (tmp = head, i = 0; i < n-1; i++)
+	{
+		if (tmp -> next = malloc(sizeof(str_list)))
+			;
+		else
+			printf("ALLOCATION ERROR\n");
+		tmp = tmp -> next;
+	}
+	tmp -> next = NULL;
+	return head;
+}
+/*FREES A LIST OF DYNAMIC STRINGS AND STRINGS THEMSELVES*/
+void strl_free(str_list * head, int freeStrings)
+{
+	str_list * tmp;
+	tmp = head;
+	head = head -> next;
+	if (freeStrings)
+	{
+	
+		while (head)
+		{
+			list_free(tmp -> str);
+			free(tmp);
+			tmp = head;
+			head = head -> next;
+		}
+		list_free(tmp -> str);
+	}
+	else
+	{
+		while (head)
+		{	
+			free(tmp);
+			tmp = head;
+			head = head -> next;
+		}
+	}
+	free(tmp);
 }

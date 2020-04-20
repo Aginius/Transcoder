@@ -2,15 +2,22 @@
 #include "StrList.c"
 #include "TransLib.c"
 
-#define SIZE 500
+#define SIZE 250
+
+typedef struct forArgs
+{
+	str_list * arg1;
+	str_list * arg2;
+	str_list * arg3;
+} forArgs;
 
 void print_Python(char *);
-char * output_Python(char *, int *, int *, int *, int *, char *, int *);
-void forGet(char *, char *, char *, char *);
-void forArgsLen(char *, int *, int *, int *);
+char * output_Python(char *, int, int *, int *, int *, int *, str_list **, int *);
+forArgs forGet(char *);
 void simpleForGet(char *, char *, char *, char *, int *);
 int isSimpleFor(char *);
 list * translateIncrement(char *, int, int);
+void isInStr(char, int *, int *);
 
 int main (int argc, char * argv[])
 {
@@ -25,8 +32,8 @@ void print_Python(char fname[])
 
 	char row[SIZE];
 	char * trans;
-	char queue[10];
-
+	str_list * queue = NULL;
+	str_list * tmp;
 	int indent;
 	int pass;
 	int mainFunc;
@@ -38,33 +45,41 @@ void print_Python(char fname[])
 	pass = 0;
 	mainFunc = 0;
 	closingBracket = 0;
-	isFor = 0;
+	isFor = -1;
 
 	if (input = fopen(fname, "r"))
 	{
 		if (output = fopen("output.py", "w"))
 		{
-			while (!feof(input))
-			{
-				fscanf(input, "%[^\n]\n", row);
-				printf("Scanning %s\n",row);
-				trans = output_Python(row, &indent, &pass, &mainFunc, &closingBracket, queue, &isFor);
-
-				if (!pass)
-				{
-					printf("Printing %s\n", trans);
-
-					tab_line(output, indent);
-					/*If it's a the end of a for loop, it prints the increment at the end of the transcripted while loop*/
-					if (isFor == indent && row[0] == '}')
+			while (fgets(row, SIZE, input))
+			{				
+				printf("Scanning %s",row);
+				/*Searching the first index after tabs*/
+				for (i = 0; row[i] == '\t'; i++);
+				
+				trans = output_Python(row, i, &indent, &pass, &mainFunc, &closingBracket, &queue, &isFor);
+				
+				/*If it's a the end of a for loop, it prints the increment at the end of the transcripted while loop*/	
+				if (isFor == indent && row[i] == '}')
+				{	
+					/*HAVE TO FIX NESTED FOR LOOPS*/
+					tmp = queue;
+					for ( ; tmp; tmp = tmp -> next)
 					{
 						tab_line(output, 1);
-						fprintf(output, "%s\n", queue);
-						isFor = 0;
+						fprintf(output, "%s\n", toStr(tmp -> str));
 					}
-					
+					strl_free(queue, 0);
+					queue = NULL;
+					isFor = -1;
+				}
+				if (!pass)
+				{
+					printf("Printing %s\n\n", trans);
+									
 					fprintf(output, "%s\n", trans);
-					if (row[0] != '}')
+					
+					if (row[i] != '}')
 					{
 						if (closingBracket)
 							closingBracket = 0;
@@ -89,7 +104,7 @@ void print_Python(char fname[])
 		printf("FILE READING ERROR\n");
 }
 
-char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int * closingBracket, char queue[], int * isFor)
+char * output_Python(char row[], int start, int * indent, int * pass, int * mainFunc, int * closingBracket, str_list ** queue, int * isFor)
 {
 	list * output = NULL;
 
@@ -115,11 +130,21 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 	intType = 0;
 	charType = 0;
 	voidType = 0;
+	
+	i = start;
+	
+	Classify(row, i, &variable, &function, &condition, &declaration, &initialization, &call, &intType, &charType, &voidType);
 
-	Classify(row, &variable, &function, &condition, &declaration, &initialization, &call, &intType, &charType, &voidType);
-	
-	tmp = noPseudo(row);
-	
+	tmp = noPseudo(row, i);
+	/*
+	printf("Translating: ");
+	for (i = tmp; row[i] != '\n'; i++)
+		printf("%c", row[i]);
+	printf("\n");
+	*/
+	for (i = 0; i < *indent; i++)
+		output = list_appendCh(output, '\t');
+
 	if (variable)
 	{
 		printf("Variable\n");
@@ -130,12 +155,14 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 			{
 				printf("It's an increment\n");
 				int increment = isIncrement(row);
-				output = translateIncrement(row, tmp, increment);
+				output = list_appendL(output, translateIncrement(row, tmp, increment));
+				printf("Increment is ");
+				list_print(output);
 				return toStr(output);
 			}
 			else
 			{
-				for (i = tmp; row[i] != '\0'; i++)
+				for (i = tmp; row[i] != '\n'; i++)
 					output = list_appendCh(output, row[i]);
 				return toStr(output);	
 			}
@@ -145,20 +172,21 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 			printf("Declaration\n");
 			if (call)
 			{
-				for (i = tmp; row[i] != '\0'; i++)
+				for (i = tmp; row[i] != '\n'; i++)
 					output = list_appendCh(output, row[i]);
 				return toStr(output);
 			}
 			else if (intType)
 			{
-				for (i = tmp; row[i] != '\0'; i++)
+				for (i = tmp; row[i] != '\n'; i++)
 					output = list_appendCh(output, row[i]);
+				
 				output = list_append(output, " = 0");
 				return toStr(output);
 			}
 			else if (charType)
 			{
-				for (i = tmp; row[i] != '\0'; i++)
+				for (i = tmp; row[i] != '\n'; i++)
 					output = list_appendCh(output, row[i]);
 				output = list_append(output, " = ''");
 				return toStr(output);
@@ -172,7 +200,7 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 		{
 			printf("Initialization\n");
 			output = list_append(output, "def ");
-			for (i = tmp; row[i] != '\0'; i++)
+			for (i = tmp; row[i] != '\n'; i++)
 				output = list_appendCh(output, row[i]);
 			output = list_appendCh(output, ':');
 			return toStr(output);
@@ -186,7 +214,7 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 		else if (call)
 		{
 			printf("Call\n");
-			for (i = tmp; row[i] != '\0'; i++)
+			for (i = tmp; row[i] != '\n'; i++)
 				output = list_appendCh(output, row[i]);
 			return toStr(output);
 		}
@@ -196,7 +224,7 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 		printf("Condition\n");
 		if (strCompare(row, "if", tmp))
 		{
-			for (i = tmp; row[i] != '\0'; i++)
+			for (i = tmp; row[i] != '\n'; i++)
 			{
 				if (row[i] == '&' && row[i+1] == '&')
 				{
@@ -216,7 +244,7 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 		}
 		else if (strCompare(row, "elif", tmp))
 		{
-			for (i = tmp; row[i] != '\0'; i++)
+			for (i = tmp; row[i] != '\n'; i++)
 			{
 				if (row[i] == '&' && row[i+1] == '&')
 				{
@@ -234,9 +262,10 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 			output = list_appendCh(output, ':');
 			return toStr(output);
 		}
-		else if (strCompare(row, "else", tmp) && nextChar(row,tmp+3) == ' ')
+	       	else if (strCompare(row, "else", tmp) && nextChar(row,tmp+3) == ' ')
 		{
-			for (i = tmp; row[i] != '\0'; i++)
+			printf("It's an else\n");
+			for (i = tmp; row[i] != '\n'; i++)
 			{
 				if (row[i] == '&' && row[i+1] == '&')
 				{
@@ -259,7 +288,7 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 			output = list_append(output, "while ");
 			for (i = tmp; row[i] != ' '; i++)
 				;
-			for (i = i+1; row[i] != '\0'; i++)
+			for (i = i+1; row[i] != '\n'; i++)
 			{
 				if (row[i] == '&' && row[i+1] == '&')
 				{
@@ -310,60 +339,72 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 			else
 			{
 				/*CONVERT THE FOR IN A WHILE*/
-				char * assign;
-				char * cond;
-				char * increment;
-				int len1 = 0;
-				int len2 = 0;
-				int len3 = 0;
+				forArgs args = forGet(row);
+				str_list * tmp;
+				list * tmpStr;
+				str_list * tmpQueue;
+				int j;
 
-				forArgsLen(row, &len1, &len2, &len3);
+				for (tmp = args.arg1; tmp; tmp = tmp -> next)
+				{	
+					for (tmpStr = tmp -> str ; tmpStr; tmpStr = tmpStr -> next)
+						output = list_appendCh(output, tmpStr -> c);
+					output = list_appendCh(output, '\n');
+				}
+				
+				for (i = 0; i < *indent; i++)
+					output = list_appendCh(output, '\t');
+				output = list_append(output, "while (");
+				for (tmpStr = args.arg2 -> str; tmpStr; tmpStr = tmpStr -> next)
+					output = list_appendCh(output, tmpStr -> c);
+				output = list_append(output, "):");
+				
+				*queue = strl_alloc(*queue, 1);
 
-				if (assign = malloc(sizeof(int)*len1))
+				tmpQueue = *queue;
+
+				tmpQueue -> str = NULL;
+
+				tmpQueue = *queue;
+
+				for (tmp = args.arg3, i = 0; tmp; tmp = tmp -> next, i++)
 				{
-					if (cond = malloc(sizeof(int)*len2))
+					for (j = 0; j < *indent; j++)
+						tmpQueue -> str = list_appendCh(tmpQueue -> str, '\t');
+
+					for (tmpStr = tmp -> str; tmpStr; tmpStr = tmpStr -> next, i++)
+						tmpQueue -> str = list_appendCh(tmpQueue -> str, tmpStr -> c);
+					
+					if (tmp -> next)
 					{
-						if (increment = malloc(sizeof(int)*len3))
-						{
-							forGet(row, assign, cond, increment);
-							output = list_append(output, assign);
-							output = list_appendCh(output, '\n');
-							for (i = 0; i < *indent; i++)
-								output = list_appendCh(output, '\t');
-							output = list_append(output, "while (");
-							output = list_append(output, cond);
-							output = list_append(output, "):");
-							
-							for (i = 0; increment[i] != '\0'; i++)
-								queue[i] = increment[i];
-							queue[i] = '\0';
-							
-							free(assign);
-							free(cond);
-							free(increment);
-										
-							*isFor = *indent;
-						}
+						if (tmpQueue -> next = malloc(sizeof(str_list)))
+							;
 						else
 							printf("ALLOCATION ERROR\n");
+						tmpQueue = tmpQueue -> next;
 					}
-					else
-						printf("ALLOCATION ERROR\n");
 				}
-				else
-					printf("ALLOCATION ERROR\n");
+				/*
+				for (tmpQueue = *queue; tmpQueue; tmpQueue = tmpQueue -> next)
+					printf("ITERATION\n");
+				*/
+				strl_free(args.arg1, 1);
+				strl_free(args.arg2, 1);
+				strl_free(args.arg3, 1);
+					
+				*isFor = *indent;
 			}
 			return toStr(output);
 		}
 	}
-	else if (row[0] == '{')
+	else if (row[tmp] == '{')
 	{
 		printf("Indent\n");
 		*indent = *indent + 1;
 		*pass = 1;
 		return " ";
 	}
-	else if (row[0] == '}')
+	else if (row[tmp] == '}')
 	{
 		printf("Unindent\n");
 		*indent = *indent - 1;
@@ -371,25 +412,25 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 			*pass = 1;
 		return " ";
 	}
-	else if (strCompare(row, "/*", 0))
+	else if (strCompare(row, "/*", tmp))
 	{
 		printf("Comment\n");
 		output = list_appendCh(output, '#');
-		for (i = 2; row[i] == ' '; i++)
+		for (i = tmp+2; row[i] == ' '; i++)
 			;
-		for (i = 2; row[i] != '\0' && (row[i] != '*' && row[i] != '/'); i++)
+		for ( ; row[i] != '\n' && (row[i] != '*' && row[i+1] != '/'); i++)
 			output = list_appendCh(output, row[i]);
 		return toStr(output);
 	}
-	else if (strCompare(row, "IMPORT", 0))
+	else if (strCompare(row, "IMPORT", tmp))
 	{
 		printf("Import\n");
 		output = list_append(output, "import ");
-		for (i = tmp; row[i] != '\0'; i++)
+		for (i = tmp; row[i] != '\n'; i++)
 			output = list_appendCh(output, row[i]);
 		return toStr(output);
 	}
-	else if (strCompare(row, "MAIN DECLARATION", 0))
+	else if (strCompare(row, "MAIN DECLARATION", tmp))
 	{
 		printf("Main declaration\n");
 		*indent = *indent - 1;
@@ -397,7 +438,7 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 		*pass = 1;
 		return " ";	
 	}
-	else if (*mainFunc && strCompare(row, "MAIN RETURN", 0))
+	else if (*mainFunc && strCompare(row, "MAIN RETURN", tmp))
 	{
 		printf("Main return\n");
 		*indent = *indent + 1;
@@ -408,7 +449,7 @@ char * output_Python(char row[], int * indent, int * pass, int * mainFunc, int *
 	else
 	{
 		printf("Not recognized\n");
-		for (i = 0; row[i] != '\0'; i++)
+		for (i = tmp; row[i] != '\n'; i++)
 			output = list_appendCh(output, row[i]);
 		return toStr(output);
 	}
@@ -472,122 +513,128 @@ void simpleForGet(char str[], char name[], char value[], char target[], int sign
 	free(t);
 }
 /*CURRENTLY SUPPORTS ONLY ONE STATEMENT PER ARGUMENT*/
-void forGet(char str[], char arg1[], char arg2[], char arg3[])
+forArgs forGet(char str[])
 {
+	forArgs args;
+	str_list * arg1;
+	str_list * arg2;
+	str_list * arg3;
+	list * lis;
+	char * tmp;
 	int i,j;
-	list * tmpArg1 = NULL;
-	list * tmpArg2 = NULL;
-	list * tmpArg3 = NULL;
-	char * ar1;
-	char * ar2;
-	char * ar3;
 	int inStr = 0;
+	int inCh = 0;
+	int closedBr = 0;
+	int openBr = 0;
+
+	args.arg1 = NULL;
+	args.arg2 = NULL;
+	args.arg3 = NULL;
+	
+	args.arg1 = strl_alloc(args.arg1, 1);
+	args.arg2 = strl_alloc(args.arg2, 1);
+	args.arg3 = strl_alloc(args.arg3, 1);
+
+	arg1 = args.arg1;
+	arg2 = args.arg2;
+	arg3 = args.arg3;
+	
+	arg1 -> str = NULL;
+	arg2 -> str = NULL;
+	arg3 -> str = NULL;
+	
 	/*GOING RIGHT AFTER THE FOR DECLARATION*/
 	for (i = 0; str[i] != '('; i++)
 		;
+
 	/*SCANNING THE FIRST ARGUMENT UNTIL THE ;*/
-	for (i = i+1; str[i] != ';'; i++)
-		tmpArg1 = list_appendCh(tmpArg1, str[i]);
-	ar1 = toStr(tmpArg1);
-	for (j = 0; ar1[j] != '\0'; j++)
-		arg1[j] = ar1[j];
-	arg1[j] = '\0';
-	free(ar1);
+	for (i = i+1; !(str[i] == ';' && !inCh && !inStr); i++)
+	{
+		isInStr(str[i], &inCh, &inStr);
+
+		if (str[i] == ',' && !inStr && !inCh && closedBr == openBr)
+		{
+			arg1  = strl_alloc(arg1, 1);
+			arg1 = arg1 -> next;
+			for (i=i+1; str[i] == ' '; i++)
+				;
+		}
+		else if (str[i] == '(' && !inStr && !inCh)
+			openBr++;
+		else if (str[i] == ')' && !inStr && !inCh)
+			closedBr++;
+		else
+			arg1 -> str = list_appendCh(arg1 -> str, str[i]);
+	}
+
 	/*SKIPPING EVENTUAL SPACES*/
 	for (i = i+1; str[i] == ' '; i++)
 		;
 	/*SCANNING THE SECOND ARGUMENT UNTIL THE ;, IF THE FORMER IS NOT INSIDE A STRING*/
-	for ( ; !(str[i] == ';' && !inStr); i++)
+	for ( ; !(str[i] == ';' && !inCh && !inStr); i++)
 	{
-		if (str[i] == 39 || str[i] == '"')
-		{
-			if (inStr)
-				inStr = 0;
-			else
-				inStr = 1;
-		}
+		isInStr(str[i], &inCh, &inStr);
+
 		if (str[i] == '&' && str[i+1] == '&')
 		{
-			tmpArg2 = list_append(tmpArg2, "and");
+			arg2 -> str = list_append(arg2 -> str, "and");
 			i++;
 		}
 		else if (str[i] == '|' && str[i+1] == '|')
 		{
-			tmpArg2 = list_append(tmpArg2, "or");
+			arg2 -> str = list_append(arg2 -> str, "or");
 			i++;
 		}
 		else
-			tmpArg2 = list_appendCh(tmpArg2, str[i]);
+			arg2 -> str = list_appendCh(arg2 -> str, str[i]);
 	}
 	
-	ar2 = toStr(tmpArg2);
-	for (j = 0; ar2[j] != '\0'; j++)
-		arg2[j] = ar2[j];
-	arg2[j] = '\0';
-	free(ar2);
 	/*SKIPPING EVENTUAL SPACES*/
 	for (i = i+1; str[i] == ' '; i++)
 		;
+
+	openBr = 0;
+	closedBr = 0;
+
 	/*SCANNING THE THIRD ARGUMENT UNTIL THE ), IF THE FORMER IS NOT INSIDE A STRING*/
-	for ( ; !(str[i] == ')' && !inStr); i++)
+	for ( ; !(str[i] == ')' && !inCh && !inStr); i++)
 	{
-		if (str[i] == 39 || str[i] == '"')
+		isInStr(str[i], &inCh, &inStr);
+
+		if (str[i] == ',' && !inStr && !inCh && openBr == closedBr)
 		{
-			if (inStr)
-				inStr = 0;
-			else
-				inStr = 1;
+			arg3 = strl_alloc(arg3, 1);
+
+			arg3 = arg3 -> next;
+			for (i=i+1; str[i] == ' '; i++)
+				;
+			i--;
 		}
-		tmpArg3 = list_appendCh(tmpArg3, str[i]);
+		else if (str[i] == '(' && !inStr && !inCh)
+			openBr++;
+		else if (str[i] == ')' && !inStr && !inCh)
+			closedBr++;
+		else
+			arg3 -> str = list_appendCh(arg3 -> str, str[i]);
 	}
-	/*HAVE TO CHANGE TRANSCRYPTING SYSTEM DOWN BELOW, IT'S BAD OPTIMIZED*/
-	ar3 = toStr(tmpArg3);
+	arg3 = args.arg3;
 	/*TRANSLATING THE INCREMENT TO PYTHON SYNTAX*/
-	tmpArg3 = translateIncrement(ar3, 0, isIncrement(ar3));
-	free(ar3);
-	list_print(tmpArg3);
-	ar3 = toStr(tmpArg3);
-	
-	for (j = 0; ar3[j] != '\0'; j++)
-		arg3[j] = ar3[j];
-	arg3[j] = '\0';
-	free(ar3);
-}
-
-void forArgsLen(char str[], int * len1, int * len2, int * len3)
-{
-	int i;
-	int inStr = 0;
-
-	for (i = 0; str[i] != '('; i++)
-		;
-
-	for (i = i+1; str[i] != ';'; i++)
-		*len1 = *len1 + 1;
-
-	for (i = i+1; str[i] != ';' && !inStr; i++)
+	while (arg3)
 	{
-		if (str[i] == 39 || str[i] == '"')
+		if (tmp = malloc(sizeof(char)*list_len(arg3 -> str)+1))
 		{
-			if (inStr)
-				inStr = 0;
-			else
-				inStr = 1;
+			for (lis = arg3 -> str, i = 0; lis; lis = lis -> next, i++)
+				tmp[i] = lis -> c;
+			tmp[i] = '\0';	
+			list_free(arg3 -> str);
+			arg3 -> str = translateIncrement(tmp, 0, isIncrement(tmp));
+			free(tmp);
 		}
-		*len2 = *len2 + 1;
+		else
+			printf("ALLOCATION ERROR\n");
+		arg3 = arg3 -> next;
 	}
-
-	for (i = i+1; str[i] != ';' && !inStr; i++)
-	{
-		if (str[i] == 39 || str[i] == '"')
-		{
-			if (inStr)
-				inStr = 0;
-			else
-				inStr = 1;
-		}
-		*len3 = *len3 + 1;
-	}
+	return args;
 }
 
 int isSimpleFor(char str[])
@@ -623,16 +670,39 @@ list * translateIncrement(char row[], int start, int type)
 	
 	if (type == 1)
 	{
-		for (start; row[start] != '+'; start++)
+		for ( ; row[start] != '+'; start++)
 			output = list_appendCh(output, row[start]);
 		
 		output = list_append(output, " += 1");
 	}
 	else if (type == 2)
 	{
-		for (start; row[start] != '-'; start++)
+		for ( ; row[start] != '-'; start++)
 			output = list_appendCh(output, row[start]);
 		output = list_append(output, " -= 1");
 	}
+	else
+	{
+		for ( ; row[start] != '\0'; start++)
+			output = list_appendCh(output, row[start]);
+	}
 	return output;
+}
+
+void isInStr(char ch, int * inCh, int * inStr)
+{
+	if (ch == 39)
+	{
+		if (*inCh)
+			*inCh = 0;
+		else if (!*inStr)
+			*inCh = 1;
+	}
+	else if (ch == '"')
+	{
+		if (*inStr)
+			*inStr = 0;
+		else if (!*inCh)
+			*inStr = 1;
+	}
 }
