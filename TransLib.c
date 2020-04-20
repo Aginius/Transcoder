@@ -46,7 +46,7 @@ int smartCount(list * head, char ch)
 //Returns the index of the string right after the pseudo type
 int noPseudo(char str[], int ind)
 {
-	if (str[ind] == '{' || str[ind] == '}' || str[ind] == '/' || strCompare(str, "return", ind))
+	if (str[ind] == '{' || str[ind] == '}' || str[ind] == '/' || strCompare(str, "return", ind) || strCompare(str, "MAIN", ind) || strCompare(str, "IMPORT", ind))
 		return ind;
 	for ( ; str[ind] != ' '; ind++)
 		;

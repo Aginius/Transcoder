@@ -6,7 +6,9 @@
 void scan_C(char *);
 char * input_C(char *, int *, int *);
 int isFunction(char *);
-int isCondition_C(char *);
+int isFunctionL(list *);
+
+#define SIZE 40
 
 int main (int argc, char * argv[])
 {
@@ -21,7 +23,7 @@ void scan_C(char fname[])
 {
 	FILE * input;
 	FILE * output;
-	char word[40];
+	char word[SIZE];
 	list * line = NULL;
 	int openBrCount;
 	int closedBrCount;
@@ -32,6 +34,8 @@ void scan_C(char fname[])
 	int firstReturn;
 	int isComment;
 	int elseStatement;
+	int bracketQueue;
+	int lastIndent;
 	int tmp;
 	int i;
 
@@ -47,13 +51,15 @@ void scan_C(char fname[])
 	noBrCondition = 0;
 	isComment = 0;
 	elseStatement = 0;
+	bracketQueue = 0;
+	lastIndent = 0;
 	tmp = 0;
 	
 	if (input = fopen(fname, "r"))
 	{
 		if (output = fopen("PseudoCode.pc", "w"))
 		{
-			//TEMPORARY DEBUG VARIABLE TO MARK ITERATIONS
+			//TEMPORARY DEBUGGING VARIABLE TO MARK ITERATIONS
 			int debug = 0;
 			while (!feof(input))
 			{
@@ -70,21 +76,26 @@ void scan_C(char fname[])
 					debug++;
 					if (line == NULL)
 						noSpace(word);
-
-					list_print(line);
-					printf("%s\n",word);
-
-					if (word[0] == '/' && word[1] == '*')
+					if (word[0] == '/')
 					{
-						//printf("COMMENT\n");
-						isComment = 1;
+						if (word[1] == '*')
+							isComment = 1;
+						/*
+						STILL IMPLEMENTING SINGLE LINE COMMENTS
+						else if (word[1] == '/')
+						{
+							fgets(word, SIZE, input);
+							for (i = 0; word[i] != '\0'; i++)
+								line = list_appendCh(line, word[i]);
+							printf("SINGLE LINE COMMENT DEBUG:\n");
+							list_print(line);
+							isComment = 1;
+						}
+						*/
 					}
-			
 					else if (list_compare(line, "else") &&  !strCompare(word, "if", 0))
-					{
-						//printf("ELSE STATEMENT\n");
 						elseStatement = 1;
-					}
+					
 					if (!elseStatement)
 					{
 						line = list_append(line, word);
@@ -93,20 +104,19 @@ void scan_C(char fname[])
 
 					openBrCount = smartCount(line, '(');
 					closedBrCount = smartCount(line, ')');
-				
-					//printf("APPENDING %s\n",word);
 					/*
+					printf("APPENDING %s\n",word);
 					printf("CURRENT LINE: ");
 					list_print(line);
 					*/
 				}
 							
-				if (!isComment && (checkLast(word) == ';' && openBrCount == closedBrCount || checkLast(word) == '{' || checkLast(word) == '}' || checkLast(word) == ')' && openBrCount == closedBrCount || list_compare(line, "else") && elseStatement || line -> c == '#' && (checkLast(word) == '>' || checkLast(word) == '"')) || isComment && strCompareTail(word, "*/"))
+				if (!isComment && (checkLast(word) == ';' && openBrCount == closedBrCount || checkLast(word) == '{' || checkLast(word) == '}' || checkLast(word) == ')' && openBrCount == closedBrCount  || list_compare(line, "else") && elseStatement || line -> c == '#' && (checkLast(word) == '>' || checkLast(word) == '"')) || isComment && strCompareTail(word, "*/"))
 				{
 					string_line = toStr(line);
-					//printf("CURRENT LINE: %s\n",string_line);
+					printf("CURRENT LINE: %s\n",string_line);
 					//printf("Open Brackets: %d\nClosed Brackets: %d\n", openBrCount, closedBrCount);
-
+					/*Translates the main declaration to pseudo code*/
 					if (strCompare(string_line, "int main(", 0) || strCompare(string_line, "int main (", 0))
 					{
 						fprintf(output, "MAIN DECLARATION\n");
@@ -123,6 +133,7 @@ void scan_C(char fname[])
 						closedBrCount = 0;
 						line = NULL;
 					}
+					/*Translates comments to pseudo code (currently multi-line only)*/
 					else if (isComment)
 					{
 						tab_line(output, indent);
@@ -139,6 +150,7 @@ void scan_C(char fname[])
 							noBrCondition = 0;
 							isOpenBr = 1;
 						}
+						/*If last line was a condition and this actual line is not a bracket, it indents the code and manually prints an open bracket*/
 						else if (noBrCondition)
 						{
 							//printf("NO BRACKET INDENTING\n");
@@ -146,10 +158,12 @@ void scan_C(char fname[])
 							fprintf(output, "%c\n", '{');
 							tmp = 1;
 							indent++;
+							lastIndent = indent;
+							bracketQueue++;
 						}
 					
 						noBrCondition = 0;
-						
+						/*Translating the input to pseudo code*/
 						trans = input_C(string_line, &indent, &noBrCondition);
 						
 						if (isOpenBr)
@@ -164,12 +178,18 @@ void scan_C(char fname[])
 							tab_line(output, indent);
 						}
 						fprintf(output, "%s\n", trans);
-						if (tmp)
+						/*If last line was a condition and this actual line is not another condition, it manually prints a closed bracket*/
+						if (tmp && !noBrCondition && lastIndent == indent)
 						{
-							indent--;
-							tab_line(output, indent);
-							fprintf(output, "%c\n", '}');
-							tmp = 0;
+							/*Prints a number of closed brackets according to previous no bracket conditions*/
+							for (i = 0; i < bracketQueue; i++)
+							{
+								indent--;
+								tab_line(output, indent);
+								fprintf(output, "%c\n", '}');
+								tmp = 0;
+							}
+							bracketQueue = 0;
 						}
 						//printf("Printing: %s\n", trans);
 						openBrCount = 0;
@@ -451,12 +471,6 @@ char * input_C(char row[], int * indent, int * noBrCondition)
 	}
 }
 
-int isCondition_C(char row[])
-{
-	if (strCount(row, "if") || strCount(row, "while") || strCount(row, "for"))
-		return 1;
-	return 0;
-}
 /*Checks if it's a function, returns 1 if a declaration, 2 if an initialization and 3 if a call*/
 int isFunction(char row[])
 {
@@ -486,7 +500,36 @@ int isFunction(char row[])
 	return 0;
 }
 
-
+/*Same as above but accepts a char list as an input*/
+int isFunctionL(list * head)
+{
+	int i;
+	list * tmp;
+	
+	if (smartCount(head, '('))
+	{
+		for (tmp = head; tmp && tmp -> next -> c != '('; tmp = tmp -> next);
+		
+		//tmp = ch_index(row, '(', 1) - 1;
+		/*Checks if there's a mathematic symbol before the first occurance of a parenthesis*/
+		if (tmp -> c != ' ' && tmp -> c != '*' && tmp -> c != '+' && tmp -> c != '-' && tmp -> c != '/')
+		{
+			if (!listCount(head, '='))
+			{
+				if (listCount(head, ';'))
+				{
+					if (list_compare(head,"int") || list_compare(head,"char") || list_compare(head,"void"))
+						return 1;
+					return 3;
+				}
+				else
+					return 2;
+			}
+			return 3;
+		}
+	}
+	return 0;
+}
 
 
 

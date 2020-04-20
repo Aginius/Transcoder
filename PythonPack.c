@@ -1,9 +1,10 @@
 #include "str.c"
 #include "StrList.c"
+#include "IntList.c"
 #include "TransLib.c"
-
+/*Max size of the input string*/
 #define SIZE 250
-
+/*Struct to store for loop arguments*/
 typedef struct forArgs
 {
 	str_list * arg1;
@@ -12,7 +13,7 @@ typedef struct forArgs
 } forArgs;
 
 void print_Python(char *);
-char * output_Python(char *, int, int *, int *, int *, int *, str_list **, int *);
+char * output_Python(char *, int, int *, int *, int *, int *, int *, str_mat **, intList **);
 forArgs forGet(char *);
 void simpleForGet(char *, char *, char *, char *, int *);
 int isSimpleFor(char *);
@@ -32,21 +33,23 @@ void print_Python(char fname[])
 
 	char row[SIZE];
 	char * trans;
-	str_list * queue = NULL;
-	str_list * tmp;
+	str_mat * queue = NULL;
+	str_mat * tmp;
+	str_list * tmpStr;
 	int indent;
 	int pass;
 	int mainFunc;
+	int mainDeclaration;
 	int closingBracket;
-	int isFor;
+	intList * isFor = NULL;
 	int i;
 
 	indent = 0;
 	pass = 0;
 	mainFunc = 0;
+	mainDeclaration = 0;
 	closingBracket = 0;
-	isFor = -1;
-
+	
 	if (input = fopen(fname, "r"))
 	{
 		if (output = fopen("output.py", "w"))
@@ -56,41 +59,48 @@ void print_Python(char fname[])
 				printf("Scanning %s",row);
 				/*Searching the first index after tabs*/
 				for (i = 0; row[i] == '\t'; i++);
-				
-				trans = output_Python(row, i, &indent, &pass, &mainFunc, &closingBracket, &queue, &isFor);
+				/*Translate the input to Python syntax*/
+				trans = output_Python(row, i, &indent, &pass, &mainFunc, &mainDeclaration, &closingBracket, &queue, &isFor);
 				
 				/*If it's a the end of a for loop, it prints the increment at the end of the transcripted while loop*/	
-				if (isFor == indent && row[i] == '}')
-				{	
-					/*HAVE TO FIX NESTED FOR LOOPS*/
+				if (isFor && intL_getLast(isFor) == indent && row[i] == '}')
+				{
 					tmp = queue;
-					for ( ; tmp; tmp = tmp -> next)
+					/*Iterates until it finds the last saved queue, then prints it*/
+					while (tmp -> next)
+						tmp = tmp -> next;
+					for (tmpStr = tmp -> arr ; tmpStr; tmpStr = tmpStr -> next)
 					{
 						tab_line(output, 1);
-						fprintf(output, "%s\n", toStr(tmp -> str));
+						fprintf(output, "%s\n", toStr(tmpStr -> str));
 					}
-					strl_free(queue, 0);
-					queue = NULL;
-					isFor = -1;
+					/*Deallocates the printed queue and its corresponding iteration number*/
+					queue = strm_pop(queue, 0);
+					isFor = intL_pop(isFor);
 				}
+				/*The variable pass can prevent some output from being printed*/
 				if (!pass)
 				{
 					printf("Printing %s\n\n", trans);
-									
+					/*Prints the output to file*/
 					fprintf(output, "%s\n", trans);
-					
+					/*If the input was not a closed bracket it deallocates the used space and resets closingBracket*/
 					if (row[i] != '}')
 					{
 						if (closingBracket)
 							closingBracket = 0;
 						free(trans);
 					}
+					/*If it was the first of some closing brackets, it prevents them from causing useless new line printing*/
 					else if (!closingBracket)
 						closingBracket = 1;	
 				}
-				/*CHANGE THE WAY IT WORKS FOR PERFORMANCE, YOU CAN USE BOOLS FROM output_Python*/
-				else if (strCompare(row, "MAIN DECLARATION", 0))
+				/*If the input was the main program declaration it prints an empty line*/
+				else if (mainDeclaration)
+				{
+					mainDeclaration = 0;
 					fprintf(output, "\n");
+				}
 				else
 					pass = 0;
 			}
@@ -104,7 +114,7 @@ void print_Python(char fname[])
 		printf("FILE READING ERROR\n");
 }
 
-char * output_Python(char row[], int start, int * indent, int * pass, int * mainFunc, int * closingBracket, str_list ** queue, int * isFor)
+char * output_Python(char row[], int start, int * indent, int * pass, int * mainFunc, int * mainDeclaration, int * closingBracket, str_mat ** queueList, intList ** isFor)
 {
 	list * output = NULL;
 
@@ -130,18 +140,13 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 	intType = 0;
 	charType = 0;
 	voidType = 0;
-	
+	/*The scanning starts after all the tabs*/
 	i = start;
-	
+	/*Calling a function that checks the kind of input*/
 	Classify(row, i, &variable, &function, &condition, &declaration, &initialization, &call, &intType, &charType, &voidType);
-
+	/*Returns the index right after the pseudo code declarations*/
 	tmp = noPseudo(row, i);
-	/*
-	printf("Translating: ");
-	for (i = tmp; row[i] != '\n'; i++)
-		printf("%c", row[i]);
-	printf("\n");
-	*/
+	/*Appends a number of tabs to the output, according to detected curly brackets*/
 	for (i = 0; i < *indent; i++)
 		output = list_appendCh(output, '\t');
 
@@ -308,6 +313,7 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 		}
 		else if (strCompare(row, "for", tmp))
 		{
+			/*Checks if it is a for that can be translated to an 'in range' python loop*/
 			if (isSimpleFor(row))
 			{
 				char name[10];
@@ -336,13 +342,18 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 				output = list_append(output, "):");
 				printf("%s\n%s\n%s\n",name,value,target);
 			}
+			/*If it's not a simple increment loop, it converts it in a while, by printing the first argument
+			 * before the while, the second argument inside the while condition and the third argument at the
+			 * while end, by a dynamic queue which can store multiple increment values*/
 			else
 			{
-				/*CONVERT THE FOR IN A WHILE*/
+				/*Calling a function that extracts the argument from the for loop and stores them into a struct*/
 				forArgs args = forGet(row);
+				str_mat * tmpQueueList;
+				str_list * queue;
 				str_list * tmp;
 				list * tmpStr;
-				str_list * tmpQueue;
+				intList * tmpIsFor;
 				int j;
 
 				for (tmp = args.arg1; tmp; tmp = tmp -> next)
@@ -351,52 +362,50 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 						output = list_appendCh(output, tmpStr -> c);
 					output = list_appendCh(output, '\n');
 				}
-				
 				for (i = 0; i < *indent; i++)
 					output = list_appendCh(output, '\t');
 				output = list_append(output, "while (");
 				for (tmpStr = args.arg2 -> str; tmpStr; tmpStr = tmpStr -> next)
 					output = list_appendCh(output, tmpStr -> c);
 				output = list_append(output, "):");
-				
-				*queue = strl_alloc(*queue, 1);
 
-				tmpQueue = *queue;
+				*queueList = strm_alloc(*queueList);
+				tmpQueueList = *queueList;
 
-				tmpQueue -> str = NULL;
+				while (tmpQueueList -> next)
+					tmpQueueList = tmpQueueList -> next;
 
-				tmpQueue = *queue;
+				tmpQueueList -> arr = NULL;
+				tmpQueueList -> arr = strl_alloc(tmpQueueList -> arr, 1);
+				queue = tmpQueueList -> arr;
+				queue -> str = NULL;
 
 				for (tmp = args.arg3, i = 0; tmp; tmp = tmp -> next, i++)
 				{
 					for (j = 0; j < *indent; j++)
-						tmpQueue -> str = list_appendCh(tmpQueue -> str, '\t');
+						queue -> str = list_appendCh(queue -> str, '\t');
 
 					for (tmpStr = tmp -> str; tmpStr; tmpStr = tmpStr -> next, i++)
-						tmpQueue -> str = list_appendCh(tmpQueue -> str, tmpStr -> c);
-					
+						queue -> str = list_appendCh(queue -> str, tmpStr -> c);
 					if (tmp -> next)
 					{
-						if (tmpQueue -> next = malloc(sizeof(str_list)))
+						if (queue -> next = malloc(sizeof(str_list)))
 							;
 						else
 							printf("ALLOCATION ERROR\n");
-						tmpQueue = tmpQueue -> next;
+						queue = queue -> next;
 					}
 				}
-				/*
-				for (tmpQueue = *queue; tmpQueue; tmpQueue = tmpQueue -> next)
-					printf("ITERATION\n");
-				*/
 				strl_free(args.arg1, 1);
 				strl_free(args.arg2, 1);
 				strl_free(args.arg3, 1);
-					
-				*isFor = *indent;
+				
+				*isFor = intL_append(*isFor, *indent);
 			}
 			return toStr(output);
 		}
 	}
+	/*Increments the indentation level if an open bracket*/
 	else if (row[tmp] == '{')
 	{
 		printf("Indent\n");
@@ -404,6 +413,7 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 		*pass = 1;
 		return " ";
 	}
+	/*Decrements the indentation level if a closed bracket*/
 	else if (row[tmp] == '}')
 	{
 		printf("Unindent\n");
@@ -412,6 +422,7 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 			*pass = 1;
 		return " ";
 	}
+	/*Comments formatting*/
 	else if (strCompare(row, "/*", tmp))
 	{
 		printf("Comment\n");
@@ -422,19 +433,22 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 			output = list_appendCh(output, row[i]);
 		return toStr(output);
 	}
+	/*Libraries import formatting*/
 	else if (strCompare(row, "IMPORT", tmp))
 	{
 		printf("Import\n");
 		output = list_append(output, "import ");
-		for (i = tmp; row[i] != '\n'; i++)
+		for (i = tmp+7; row[i] != '\n'; i++)
 			output = list_appendCh(output, row[i]);
 		return toStr(output);
 	}
+	/*Python does not need a main method declaration, so it just accordingly formats the output*/
 	else if (strCompare(row, "MAIN DECLARATION", tmp))
 	{
 		printf("Main declaration\n");
 		*indent = *indent - 1;
 		*mainFunc = 1;
+		*mainDeclaration = 1;
 		*pass = 1;
 		return " ";	
 	}
@@ -446,6 +460,7 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 		*pass = 1;
 		return " ";
 	}
+	/*If the input is not of any known type, it just prints it as it is*/
 	else
 	{
 		printf("Not recognized\n");
@@ -455,7 +470,7 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 	}
 }
 
-//RETURNS ALL ARGUMENTS FROM A SIMPLE FOR LOOP
+/*Returns all arguments from a simple for loop*/
 void simpleForGet(char str[], char name[], char value[], char target[], int sign[])
 {
 	int i,j;
@@ -512,7 +527,7 @@ void simpleForGet(char str[], char name[], char value[], char target[], int sign
 	target[j] = '\0';
 	free(t);
 }
-/*CURRENTLY SUPPORTS ONLY ONE STATEMENT PER ARGUMENT*/
+/*Returns all arguments from a for loop and dynamically stores them in an ordered struct*/
 forArgs forGet(char str[])
 {
 	forArgs args;
@@ -636,7 +651,9 @@ forArgs forGet(char str[])
 	}
 	return args;
 }
-
+/*Checks if the input is a simple increment for loop,
+ * with an int initialization, a simple 'less than/more than'
+ * comparison and a single increment or decrement*/
 int isSimpleFor(char str[])
 {
 	int i;
@@ -663,7 +680,7 @@ int isSimpleFor(char str[])
 
 	return 1;
 }
-
+/*Translates increment from pseudo code to Python syntax*/
 list * translateIncrement(char row[], int start, int type)
 {
 	list * output = NULL;
@@ -688,7 +705,7 @@ list * translateIncrement(char row[], int start, int type)
 	}
 	return output;
 }
-
+/*Inside a loop, it checks if the iteration is currently inside a string or char*/
 void isInStr(char ch, int * inCh, int * inStr)
 {
 	if (ch == 39)

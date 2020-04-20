@@ -129,7 +129,7 @@ void appendChar(char str[], char ch)
 		;
 	str[i] = ch;
 }
-
+//Returns the index of a char in the given string
 int ch_index(char str[], char el, int occurance)
 {
 	int i;

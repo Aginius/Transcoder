@@ -13,6 +13,12 @@ typedef struct list_A
 	struct list_A * next;
 } str_list;
 
+typedef struct mat_A
+{
+	str_list * arr;
+	struct mat_A * next;
+} str_mat;
+
 /*CURRENTLY IMPLEMENTING LISTS OF DYNAMIC STRINGS*/
 
 void list_print(list * );
@@ -34,6 +40,11 @@ int list_smartLen(list *);
 
 str_list * strl_alloc(str_list *, int);
 void strl_free(str_list *, int);
+
+str_mat * strm_alloc(str_mat *);
+str_mat * strm_free(str_mat *, int);
+str_mat * strm_pop(str_mat *, int);
+void strm_print(str_mat *);
 
 void list_print(list * head)
 {
@@ -391,7 +402,7 @@ str_list * strl_alloc(str_list * head, int n)
 	{	
 		while(tmp->next)
 			tmp = tmp -> next;
-		
+
 		for (i = 0; i < n; i++)
 		{
 			if (tmp->next = malloc(sizeof(str_list)))
@@ -403,7 +414,6 @@ str_list * strl_alloc(str_list * head, int n)
 		tmp -> next =  NULL;
 		return head;
 	}
-	
 	if (head = malloc(sizeof(str_list)))
 		;	
 	else
@@ -448,4 +458,96 @@ void strl_free(str_list * head, int freeStrings)
 		}
 	}
 	free(tmp);
+}
+//Allocates empty space in an array of string arrays
+str_mat * strm_alloc(str_mat * head)
+{
+	str_mat * tmp;
+
+	if (head)
+	{
+		tmp = head;
+		while (tmp -> next)
+			tmp = tmp -> next;
+		if (tmp -> next = malloc(sizeof(str_mat)))
+			;
+		else
+			printf("ALLOCATION ERROR\n");
+		tmp -> next -> next = NULL;
+		return head;
+	}
+
+	if (head = malloc(sizeof(str_mat)))
+		;
+	else
+		printf("ALLOCATION ERROR\n");
+	head -> next = NULL;
+	return head;
+}
+
+str_mat * strm_free(str_mat * head, int freeStrings)
+{
+	str_mat * tmp1;
+	str_mat * tmp2;
+	tmp1 = head;
+	tmp2 = head -> next;
+
+	if (!head)
+	{
+		strl_free(tmp1 -> arr, freeStrings);
+		free(tmp1);
+		return NULL;
+	}
+
+	while (tmp2 -> next)
+	{
+		strl_free(tmp1 -> arr, freeStrings);
+		free(tmp1);
+		tmp1 = tmp2;
+		tmp2 = tmp2 -> next;
+	}
+	strl_free(tmp1 -> arr, freeStrings);		
+	free(tmp1);
+	strl_free(tmp1 -> next -> arr, freeStrings);
+	free(tmp1 -> next);
+	tmp1 -> next = NULL;
+	return head;
+}
+/*Deallocates last array of the list, optionally deallocates its strings also*/
+str_mat * strm_pop(str_mat * head, int freeStrings)
+{
+	str_mat * tmp;
+	tmp = head;
+		
+	if (!tmp -> next)
+	{
+		strl_free(head -> arr, freeStrings);
+		free(head);
+		return NULL;
+	}
+	while (tmp -> next -> next)
+		tmp = tmp -> next;
+	strl_free(tmp -> next -> arr, freeStrings);
+	free(tmp -> next);
+	tmp -> next = NULL;
+
+	return head;
+}
+
+void strm_print(str_mat * head)
+{
+	str_list * tmpArr;
+	int ind = 0;
+	while (head)
+	{
+		printf("ARRAY %d:\n", ind);
+		tmpArr = head -> arr;
+		while (tmpArr)
+		{
+			list_print(tmpArr -> str);
+			tmpArr = tmpArr -> next;
+		}
+		head = head -> next;
+		ind++;
+	}
 }
