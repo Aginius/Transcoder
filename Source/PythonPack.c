@@ -1,5 +1,5 @@
 /*Max size of the input string*/
-#define SIZE 250
+#define SIZE 500
 /*Struct to store for loop arguments*/
 typedef struct forArgs
 {
@@ -51,13 +51,12 @@ void print_Python(char fname[])
 		if (output = fopen(fname, "w"))
 		{
 			while (fgets(row, SIZE, input))
-			{				
+			{	
 				//printf("Scanning %s",row);
 				/*Searching the first index after tabs*/
 				for (i = 0; row[i] == '\t'; i++);
 				/*Translate the input to Python syntax*/
 				trans = output_Python(row, i, &indent, &pass, &mainFunc, &mainDeclaration, &closingBracket, &queue, &isFor);
-				
 				/*If it's a the end of a for loop, it prints the increment at the end of the transcripted while loop*/	
 				if (isFor && intL_getLast(isFor) == indent && row[i] == '}')
 				{
