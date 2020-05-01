@@ -1,5 +1,6 @@
 /*Max size of the input string*/
 #define SIZE 500
+
 /*Struct to store for loop arguments*/
 typedef struct forArgs
 {
@@ -14,14 +15,7 @@ forArgs forGet(char *);
 void simpleForGet(char *, char *, char *, char *, int *);
 int isSimpleFor(char *);
 list * translateIncrement(char *, int, int);
-void isInStr(char, int *, int *);
-/*
-int main (int argc, char * argv[])
-{
-	print_Python("PseudoCode.pc");
-	return 0;
-}
-*/
+
 void print_Python(char fname[])
 {
 	FILE * input;
@@ -161,8 +155,17 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 			}
 			else
 			{
-				for (i = tmp; row[i] != '\n'; i++)
-					output = list_appendCh(output, row[i]);
+				if (charType && isArr(row))
+				{
+					for (i = tmp; row[i] != '['; i++)
+						output = list_appendCh(output, row[i]);
+					for ( ; row[i] != ']'; i++);
+					for (i = i+1; row[i] != '\n'; i++)
+						output = list_appendCh(output, row[i]);
+				}
+				else
+					for (i = tmp; row[i] != '\n'; i++)
+						output = list_appendCh(output, row[i]);
 				return toStr(output);	
 			}
 		}
@@ -185,8 +188,13 @@ char * output_Python(char row[], int start, int * indent, int * pass, int * main
 			}
 			else if (charType)
 			{
-				for (i = tmp; row[i] != '\n'; i++)
-					output = list_appendCh(output, row[i]);
+				//String conversion
+				if (isArr(row))
+					for (i = tmp; row[i] != '['; i++)
+						output = list_appendCh(output, row[i]);
+				else
+					for (i = tmp; row[i] != '\n'; i++)
+						output = list_appendCh(output, row[i]);
 				output = list_append(output, " = ''");
 				return toStr(output);
 			}
@@ -688,22 +696,4 @@ list * translateIncrement(char row[], int start, int type)
 			output = list_appendCh(output, row[start]);
 	}
 	return output;
-}
-/*Inside a loop, it checks if the iteration is currently inside a string or char*/
-void isInStr(char ch, int * inCh, int * inStr)
-{
-	if (ch == 39)
-	{
-		if (*inCh)
-			*inCh = 0;
-		else if (!*inStr)
-			*inCh = 1;
-	}
-	else if (ch == '"')
-	{
-		if (*inStr)
-			*inStr = 0;
-		else if (!*inCh)
-			*inStr = 1;
-	}
 }

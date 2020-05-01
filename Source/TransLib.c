@@ -9,7 +9,8 @@ int noPseudo(char *, int);
 void tab_line(FILE *, int);
 int isIncrement(char *);
 void Classify(char *, int, int *, int *, int *, int *, int *, int *, int *, int *, int *);
-
+void isInStr(char, int *, int *);
+int isArr(char *);
 
 //Counts the character if not in strings
 int smartCount(list * head, char ch)
@@ -17,8 +18,6 @@ int smartCount(list * head, char ch)
 	int count;
 	int inStr;
 	int inChar;
-
-	//int DEBUG_IND = 0;
 
 	count = 0;
 	inStr = 0;
@@ -42,7 +41,6 @@ int smartCount(list * head, char ch)
 			else
 				inStr = 1;
 		}
-		//DEBUG_IND++;
 	}
 	return count;
 }
@@ -114,10 +112,45 @@ void Classify(char str[], int start,  int * variable, int * function, int * cond
 				*charType = 1;
 			else if (strCompare(str, "v", i))
 				*voidType = 1;
-			else
-				//printf("NOT RECOGNIZED\n");
 			compare = 0;
 		}
 	}
 }
 
+/*Inside a loop, it checks if the iteration is currently inside a string or char*/
+void isInStr(char ch, int * inCh, int * inStr)
+{
+	if (ch == 39)
+	{
+		if (*inCh)
+			*inCh = 0;
+		else if (!*inStr)
+			*inCh = 1;
+	}
+	else if (ch == '"')
+	{
+		if (*inStr)
+			*inStr = 0;
+		else if (!*inCh)
+			*inStr = 1;
+	}
+}
+/*Checks if a given string represents an array*/
+int isArr(char str[])
+{
+	int check = 0;
+	int inCh = 0;
+	int inStr = 0;
+	int i;
+
+	for (i = 0; str[i] != '\0'; i++)
+	{
+		isInStr(str[i], &inCh, &inStr);
+
+		if (str[i] == '[' && !inStr && !inCh)
+			check = 1;
+		else if (str[i] == ']' && !inStr && !inCh && check)
+			return 1;
+	}
+	return 0;
+}

@@ -216,7 +216,7 @@ void noSpace(char str[])
 		free(tmp);
 	}
 }
-
+//Copies the given string to new allocated space and returns it
 char * strCopy(char str[])
 {
 	char * nu_str = NULL;
